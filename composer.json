@@ -1,0 +1,24 @@
+{
+    "name": "blackcat/auth",
+    "description": "Unified authentication & RBAC SDK for the BlackCat platform",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "psr/log": "^3.0",
+        "ext-sodium": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "BlackCat\\Auth\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BlackCat\\Auth\\Tests\\": "tests/"
+        }
+    },
+    "bin": ["bin/auth", "bin/auth-http"],
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

@@ -1,0 +1,111 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use BlackCat\Auth\Config\AuthConfig;
+use BlackCat\Auth\Config\FoundationConfig;
+use BlackCat\Auth\Http\HttpServer;
+use BlackCat\Auth\Foundation\UserStoreFactory;
+use BlackCat\Auth\Telemetry\AuthTelemetry;
+use Psr\Log\NullLogger;
+
+$env = $_ENV + $_SERVER;
+$options = getopt('', ['port::', 'config::']);
+$configPath = $options['config'] ?? $argv[1] ?? $env['BLACKCAT_AUTH_CONFIG'] ?? null;
+
+if ($configPath && is_file($configPath)) {
+    $foundation = FoundationConfig::fromFile($configPath);
+    $config = $foundation->authConfig();
+    $store = UserStoreFactory::create($foundation->userStore());
+    $provider = $store->provider();
+    $telemetry = new AuthTelemetry($foundation->telemetryFile());
+} else {
+    $config = AuthConfig::fromEnv($env);
+    $provider = bootstrapProvider($env);
+    $telemetry = new AuthTelemetry($env['BLACKCAT_AUTH_TELEMETRY_FILE'] ?? null);
+}
+
+$server = HttpServer::bootstrap($config, $provider, new NullLogger(), telemetry: $telemetry);
+
+$port = isset($options['port']) ? (int)$options['port'] : (int)($env['BLACKCAT_AUTH_HTTP_PORT'] ?? 8082);
+$socket = stream_socket_server('tcp://0.0.0.0:' . $port, $errno, $errstr);
+if (!$socket) {
+    fwrite(STDERR, "Unable to bind port {$port}: {$errstr}\n");
+    exit(1);
+}
+fwrite(STDOUT, "BlackCat Auth HTTP listening on :{$port}\n");
+while ($conn = @stream_socket_accept($socket)) {
+    $request = stream_get_contents($conn) ?: '';
+    $response = $server->handle(parseRequest($request));
+    $body = json_encode($response['body'], JSON_UNESCAPED_SLASHES);
+    $status = $response['status'] ?? 200;
+    $statusText = $status === 200 ? 'OK' : ($status === 401 ? 'Unauthorized' : 'Error');
+    $headers = array_merge([
+        "HTTP/1.1 {$status} {$statusText}",
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($body),
+        'Connection: close',
+    ], $response['headers'] ?? []);
+    fwrite($conn, implode("\r\n", $headers) . "\r\n\r\n" . $body);
+    fclose($conn);
+}
+
+function bootstrapProvider(array $env): \BlackCat\Auth\Identity\IdentityProviderInterface
+{
+    if (!empty($env['BLACKCAT_AUTH_DB_DSN'])) {
+        $foundation = [
+            'driver' => 'database',
+            'dsn' => $env['BLACKCAT_AUTH_DB_DSN'],
+            'username' => $env['BLACKCAT_AUTH_DB_USER'] ?? null,
+            'password' => $env['BLACKCAT_AUTH_DB_PASS'] ?? null,
+            'table' => $env['BLACKCAT_AUTH_DB_TABLE'] ?? 'users',
+            'email_column' => $env['BLACKCAT_AUTH_DB_EMAIL_COLUMN'] ?? 'email',
+            'password_column' => $env['BLACKCAT_AUTH_DB_PASSWORD_COLUMN'] ?? 'password',
+            'roles_column' => $env['BLACKCAT_AUTH_DB_ROLES_COLUMN'] ?? 'roles',
+            'pepper_env' => $env['BLACKCAT_AUTH_PEPPER_ENV'] ?? 'BLACKCAT_AUTH_PEPPER',
+        ];
+        return UserStoreFactory::create($foundation)->provider();
+    }
+    $users = json_decode($env['BLACKCAT_AUTH_USERS'] ?? '[]', true) ?: [
+        ['id' => 'demo', 'email' => 'admin@example.com', 'password' => 'secret', 'roles' => ['admin']],
+    ];
+    return new \BlackCat\Auth\Identity\ArrayUserProvider($users);
+}
+
+/**
+ * @return array{method:string,path:string,query:array<string,string>,headers:array<string,string>,body:array<string,mixed>}
+ */
+function parseRequest(string $raw): array
+{
+    $segments = explode("\r\n\r\n", $raw, 2);
+    $head = $segments[0] ?? '';
+    $bodyRaw = $segments[1] ?? '';
+    $lines = explode("\r\n", $head);
+    $requestLine = array_shift($lines);
+    [$method, $target] = array_pad(explode(' ', (string)$requestLine), 2, '');
+    $parsedUrl = parse_url($target ?? '/');
+    $path = $parsedUrl['path'] ?? '/';
+    $query = [];
+    if (!empty($parsedUrl['query'])) {
+        parse_str($parsedUrl['query'], $query);
+    }
+    $headers = [];
+    foreach ($lines as $line) {
+        if (strpos($line, ':') === false) {
+            continue;
+        }
+        [$name, $value] = explode(':', $line, 2);
+        $headers[trim($name)] = trim($value);
+    }
+    $body = json_decode($bodyRaw, true) ?: [];
+    $method = strtoupper($method ?: 'GET');
+    return [
+        'method' => strtoupper($method ?: 'GET'),
+        'path' => $path,
+        'query' => $query,
+        'headers' => $headers,
+        'body' => $body,
+    ];
+}
