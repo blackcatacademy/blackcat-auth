@@ -24,7 +24,18 @@ final class EnvPepperProvider implements PepperProviderInterface
 
     private function load(string $env, string $version): Pepper
     {
-        $value = $_ENV[$env] ?? '';
+        $value = $_ENV[$env] ?? $_SERVER[$env] ?? null;
+        if ($value === null || $value === false || $value === '') {
+            try {
+                $g = function_exists('getenv') ? getenv($env) : false;
+                if ($g !== false && $g !== null) {
+                    $value = $g;
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        $value = is_scalar($value) ? (string)$value : '';
         if ($value === '') {
             throw new \RuntimeException(sprintf('Pepper env %s is not set.', $env));
         }
