@@ -98,11 +98,8 @@ return [
         'dsn' => '${env:BLACKCAT_AUTH_DB_DSN}',
         'user' => '${env:BLACKCAT_AUTH_DB_USER}',
         'pass' => '${env:BLACKCAT_AUTH_DB_PASS}',
-        'pepper_env' => 'BLACKCAT_AUTH_PEPPER',
-        // Dev-only: keys_dir override when runtime config is not initialized (recommended is runtime config crypto.keys_dir).
-        'ingress' => [
-            'keys_dir' => '${env:BLACKCAT_KEYS_DIR}',
-        ],
+        // Security-critical pepper comes from `blackcat-config` runtime config (default key: auth.pepper).
+        'pepper_config_key' => 'auth.pepper',
     ],
     // Optional: DB-backed mailing via `blackcat-mailing` (used for email verification).
     // The worker reads SMTP settings from env (see blackcat-mailing/README.md).

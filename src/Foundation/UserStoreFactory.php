@@ -6,7 +6,6 @@ namespace BlackCat\Auth\Foundation;
 use BlackCat\Auth\Identity\ArrayUserProvider;
 use BlackCat\Auth\Identity\DatabaseUserProvider;
 use BlackCat\Auth\Identity\PlainEmailHasher;
-use BlackCat\Auth\Password\EnvPepperProvider;
 use BlackCat\Auth\Password\PasswordHasher;
 use BlackCat\Auth\Password\RuntimeConfigPepperProvider;
 use BlackCat\Core\Database;
@@ -45,27 +44,10 @@ final class UserStoreFactory
         }
 
         $db = self::bootDatabase($config);
-        self::configureIngress($config);
         self::requireIngressCriteriaAdapter();
 
-        $pepperProvider = null;
-        if (class_exists('\\BlackCat\\Config\\Runtime\\Config')) {
-            $pepperKey = (string)($config['pepper_config_key'] ?? 'auth.pepper');
-
-            // Prefer runtime config for security-critical secrets.
-            // Only fall back to env when runtime config is not initialized at all.
-            if (!\BlackCat\Config\Runtime\Config::isInitialized()) {
-                \BlackCat\Config\Runtime\Config::tryInitFromFirstAvailableJsonFile();
-            }
-            if (\BlackCat\Config\Runtime\Config::isInitialized()) {
-                $pepperProvider = new RuntimeConfigPepperProvider($pepperKey);
-            }
-        }
-
-        if ($pepperProvider === null) {
-            $pepperEnv = (string)($config['pepper_env'] ?? 'BLACKCAT_AUTH_PEPPER');
-            $pepperProvider = new EnvPepperProvider($pepperEnv);
-        }
+        $pepperKey = (string)($config['pepper_config_key'] ?? 'auth.pepper');
+        $pepperProvider = new RuntimeConfigPepperProvider($pepperKey);
 
         $hasher = new PasswordHasher($pepperProvider);
         $provider = new DatabaseUserProvider(
@@ -123,47 +105,13 @@ final class UserStoreFactory
         return Database::getInstance();
     }
 
-    /**
-     * Optional: allow auth config to provide a keys_dir override (dev-only).
-     *
-     * Security:
-     * - If `blackcat-config` runtime config is initialized, it remains the single source of truth.
-     * - This prevents lower-trust config files from redirecting the crypto boundary.
-     *
-     * @param array<string,mixed> $config
-     */
-    private static function configureIngress(array $config): void
-    {
-        $ingress = $config['ingress'] ?? null;
-        if (!is_array($ingress)) {
-            return;
-        }
-
-        $keysDir = $ingress['keys_dir'] ?? $ingress['keysDir'] ?? null;
-        if (!is_string($keysDir) || trim($keysDir) === '') {
-            return;
-        }
-
-        // If runtime config is initialized, do not allow this config file to override the crypto boundary.
-        if (class_exists('\\BlackCat\\Config\\Runtime\\Config')) {
-            if (!\BlackCat\Config\Runtime\Config::isInitialized()) {
-                \BlackCat\Config\Runtime\Config::tryInitFromFirstAvailableJsonFile();
-            }
-            if (\BlackCat\Config\Runtime\Config::isInitialized()) {
-                return;
-            }
-        }
-
-        IngressLocator::configure(null, $keysDir);
-    }
-
     private static function requireIngressCriteriaAdapter(): void
     {
         $adapter = IngressLocator::adapter();
         if (!$adapter instanceof DatabaseIngressCriteriaAdapterInterface) {
             throw new InvalidArgumentException(
                 'Database user store requires crypto ingress for deterministic lookups (email_hash). '
-                . 'Configure runtime config key "crypto.keys_dir" and install blackcat-crypto + blackcat-database-crypto.'
+                . 'Ensure blackcat-config runtime config is present and contains crypto.keys_dir + crypto.manifest.'
             );
         }
     }

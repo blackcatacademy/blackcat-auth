@@ -99,7 +99,7 @@ final class FoundationConfig
         if (is_string($value)) {
             if (preg_match('/^\$\{env:([^}]+)}/', $value, $envMatch)) {
                 $envKey = $envMatch[1];
-                return $profileEnv[$envKey] ?? getenv($envKey) ?: '';
+                return $profileEnv[$envKey] ?? '';
             }
             if (preg_match('/^\$\{file:([^}]+)}/', $value, $fileMatch)) {
                 $filePath = $fileMatch[1];

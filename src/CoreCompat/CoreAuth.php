@@ -7,7 +7,6 @@ use BlackCat\Auth\AuthManager;
 use BlackCat\Auth\Config\AuthConfig;
 use BlackCat\Auth\Identity\DatabaseUserProvider;
 use BlackCat\Auth\Identity\PlainEmailHasher;
-use BlackCat\Auth\Password\EnvPepperProvider;
 use BlackCat\Auth\Password\PasswordHasher;
 use BlackCat\Auth\Password\RuntimeConfigPepperProvider;
 use BlackCat\Auth\Token\TokenPair;
@@ -151,17 +150,7 @@ final class CoreAuth
     private static function passwordHasher(): PasswordHasher
     {
         if (self::$hasher === null) {
-            $pepperProvider = null;
-            if (\class_exists('\\BlackCat\\Config\\Runtime\\Config')) {
-                if (!\BlackCat\Config\Runtime\Config::isInitialized()) {
-                    \BlackCat\Config\Runtime\Config::tryInitFromFirstAvailableJsonFile();
-                }
-                if (\BlackCat\Config\Runtime\Config::isInitialized()) {
-                    $pepperProvider = new RuntimeConfigPepperProvider('auth.pepper');
-                }
-            }
-            $pepperProvider ??= new EnvPepperProvider();
-            self::$hasher = new PasswordHasher($pepperProvider);
+            self::$hasher = new PasswordHasher(new RuntimeConfigPepperProvider('auth.pepper'));
         }
         return self::$hasher;
     }

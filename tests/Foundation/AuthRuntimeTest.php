@@ -14,26 +14,14 @@ final class AuthRuntimeTest extends TestCase
         mkdir($dir, 0777, true);
         $metrics = $dir . '/metrics.prom';
         $configPath = $dir . '/config.php';
-        $pepper = base64_encode(random_bytes(32));
-        $signingKey = base64_encode(random_bytes(32));
-        $_ENV['BLACKCAT_AUTH_SIGNING_KEY'] = $signingKey;
-        putenv('BLACKCAT_AUTH_SIGNING_KEY=' . $signingKey);
-        $_ENV['BLACKCAT_SERVICE_API_SECRET'] = 'svc-secret';
-        putenv('BLACKCAT_SERVICE_API_SECRET=svc-secret');
-        $_ENV['BLACKCAT_AUTH_PEPPER'] = $pepper;
-        putenv('BLACKCAT_AUTH_PEPPER=' . $pepper);
         file_put_contents($configPath, '<?php return ' . var_export([
             'auth' => [
                 'issuer' => 'https://auth.local',
                 'audience' => 'clients',
-                'signing_key' => '${env:BLACKCAT_AUTH_SIGNING_KEY}',
                 'public_base_url' => 'https://auth.local',
-                'roles' => ['admin' => ['permissions' => ['*']]],
-                'clients' => ['service-api' => ['secret' => '${env:BLACKCAT_SERVICE_API_SECRET}', 'roles' => ['svc']]],
             ],
             'user_store' => [
                 'driver' => 'array',
-                'pepper_env' => 'BLACKCAT_AUTH_PEPPER',
                 'users' => [
                     ['id' => 'demo', 'email' => 'admin@example.com', 'password' => 'secret', 'roles' => ['admin']],
                 ],

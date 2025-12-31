@@ -62,6 +62,9 @@ final class AuthConfig
         if (!RuntimeConfig::isInitialized()) {
             RuntimeConfig::tryInitFromFirstAvailableJsonFile();
         }
+        if (!RuntimeConfig::isInitialized()) {
+            throw new \RuntimeException('Runtime config is not initialized (required by blackcat-auth).');
+        }
 
         $issuer = (string)($env['BLACKCAT_AUTH_ISSUER'] ?? 'blackcat-auth');
         $audience = (string)($env['BLACKCAT_AUTH_AUDIENCE'] ?? 'blackcat-clients');
@@ -73,87 +76,80 @@ final class AuthConfig
         $pkceWindow = (int)($env['BLACKCAT_AUTH_PKCE_TTL'] ?? 300);
         $baseUrl = (string)($env['BLACKCAT_AUTH_BASE_URL'] ?? $issuer);
 
-        if (RuntimeConfig::isInitialized()) {
-            try {
-                $v = RuntimeConfig::get('auth.issuer');
-                if (is_string($v) && trim($v) !== '') {
-                    $issuer = trim($v);
-                }
-            } catch (\Throwable) {
+        try {
+            $v = RuntimeConfig::get('auth.issuer');
+            if (is_string($v) && trim($v) !== '') {
+                $issuer = trim($v);
             }
-            try {
-                $v = RuntimeConfig::get('auth.audience');
-                if (is_string($v) && trim($v) !== '') {
-                    $audience = trim($v);
-                }
-            } catch (\Throwable) {
+        } catch (\Throwable) {
+        }
+        try {
+            $v = RuntimeConfig::get('auth.audience');
+            if (is_string($v) && trim($v) !== '') {
+                $audience = trim($v);
             }
-            try {
-                $v = RuntimeConfig::get('auth.signing_key');
-                if (is_string($v) && trim($v) !== '') {
-                    $signingKey = trim($v);
-                }
-            } catch (\Throwable) {
+        } catch (\Throwable) {
+        }
+        try {
+            $v = RuntimeConfig::get('auth.signing_key');
+            if (is_string($v) && trim($v) !== '') {
+                $signingKey = trim($v);
             }
+        } catch (\Throwable) {
+        }
 
-            try {
-                $v = RuntimeConfig::get('auth.access_ttl');
-                if (is_int($v)) {
-                    $access = $v;
-                } elseif (is_string($v) && ctype_digit(trim($v))) {
-                    $access = (int)trim($v);
-                }
-            } catch (\Throwable) {
+        try {
+            $v = RuntimeConfig::get('auth.access_ttl');
+            if (is_int($v)) {
+                $access = $v;
+            } elseif (is_string($v) && ctype_digit(trim($v))) {
+                $access = (int)trim($v);
             }
-            try {
-                $v = RuntimeConfig::get('auth.refresh_ttl');
-                if (is_int($v)) {
-                    $refresh = $v;
-                } elseif (is_string($v) && ctype_digit(trim($v))) {
-                    $refresh = (int)trim($v);
-                }
-            } catch (\Throwable) {
+        } catch (\Throwable) {
+        }
+        try {
+            $v = RuntimeConfig::get('auth.refresh_ttl');
+            if (is_int($v)) {
+                $refresh = $v;
+            } elseif (is_string($v) && ctype_digit(trim($v))) {
+                $refresh = (int)trim($v);
             }
-            try {
-                $v = RuntimeConfig::get('auth.pkce_ttl');
-                if (is_int($v)) {
-                    $pkceWindow = $v;
-                } elseif (is_string($v) && ctype_digit(trim($v))) {
-                    $pkceWindow = (int)trim($v);
-                }
-            } catch (\Throwable) {
+        } catch (\Throwable) {
+        }
+        try {
+            $v = RuntimeConfig::get('auth.pkce_ttl');
+            if (is_int($v)) {
+                $pkceWindow = $v;
+            } elseif (is_string($v) && ctype_digit(trim($v))) {
+                $pkceWindow = (int)trim($v);
             }
-            try {
-                $v = RuntimeConfig::get('auth.base_url');
-                if (is_string($v) && trim($v) !== '') {
-                    $baseUrl = trim($v);
-                }
-            } catch (\Throwable) {
+        } catch (\Throwable) {
+        }
+        try {
+            $v = RuntimeConfig::get('auth.base_url');
+            if (is_string($v) && trim($v) !== '') {
+                $baseUrl = trim($v);
             }
+        } catch (\Throwable) {
+        }
 
-            try {
-                $v = RuntimeConfig::get('auth.roles');
-                if (is_array($v)) {
-                    $roles = $v;
-                }
-            } catch (\Throwable) {
+        try {
+            $v = RuntimeConfig::get('auth.roles');
+            if (is_array($v)) {
+                $roles = $v;
             }
-            try {
-                $v = RuntimeConfig::get('auth.clients');
-                if (is_array($v)) {
-                    $clients = $v;
-                }
-            } catch (\Throwable) {
+        } catch (\Throwable) {
+        }
+        try {
+            $v = RuntimeConfig::get('auth.clients');
+            if (is_array($v)) {
+                $clients = $v;
             }
-        } else {
-            $raw = $env['BLACKCAT_AUTH_SIGNING_KEY'] ?? ($env['BLACKCAT_AUTH_KEY'] ?? null);
-            if (is_string($raw) && trim($raw) !== '') {
-                $signingKey = trim($raw);
-            }
+        } catch (\Throwable) {
         }
 
         if (!is_string($signingKey) || trim($signingKey) === '') {
-            throw new \RuntimeException('Auth signing key is missing. Configure runtime config key "auth.signing_key" (recommended) or set BLACKCAT_AUTH_SIGNING_KEY / BLACKCAT_AUTH_KEY.');
+            throw new \RuntimeException('Auth signing key is missing. Configure runtime config key "auth.signing_key".');
         }
         $signingKey = trim($signingKey);
 

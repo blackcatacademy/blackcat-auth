@@ -13,14 +13,24 @@ final class FoundationConfigTest extends TestCase
         $tempDir = sys_get_temp_dir() . '/auth-foundation-' . bin2hex(random_bytes(4));
         mkdir($tempDir, 0777, true);
         $configPath = $tempDir . '/config.php';
-        $signing = base64_encode(random_bytes(32));
-        $_ENV['BLACKCAT_AUTH_SIGNING_KEY'] = $signing;
-        putenv('BLACKCAT_AUTH_SIGNING_KEY=' . $signing);
+        $profilePath = $tempDir . '/profiles.php';
+        file_put_contents($profilePath, '<?php return ' . var_export([
+            [
+                'environment' => 'test',
+                'env' => [
+                    'BLACKCAT_AUTH_ISSUER' => 'https://auth.test',
+                ],
+            ],
+        ], true) . ';');
+
         file_put_contents($configPath, '<?php return ' . var_export([
+            'config_profile' => [
+                'file' => $profilePath,
+                'environment' => 'test',
+            ],
             'auth' => [
-                'issuer' => 'https://auth.test',
+                'issuer' => '${env:BLACKCAT_AUTH_ISSUER}',
                 'audience' => 'clients',
-                'signing_key' => '${env:BLACKCAT_AUTH_SIGNING_KEY}',
                 'access_ttl' => 600,
                 'refresh_ttl' => 7200,
                 'public_base_url' => 'https://auth.test',
