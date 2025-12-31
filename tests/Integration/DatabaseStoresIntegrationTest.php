@@ -17,18 +17,20 @@ use BlackCat\Database\Packages\WebauthnChallenges\Repository\WebauthnChallengeRe
 use BlackCat\Database\Packages\WebauthnChallenges\WebauthnChallengesModule;
 use BlackCat\Database\Packages\WebauthnCredentials\Repository\WebauthnCredentialRepository;
 use BlackCat\Database\Packages\WebauthnCredentials\WebauthnCredentialsModule;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunClassInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Requires a real DB (MySQL/Postgres); skipped unless DB_DSN is provided.
+ * Requires a real DB (MySQL/Postgres); fails if a DB is not reachable.
  */
+#[RunClassInSeparateProcess]
+#[PreserveGlobalState(false)]
 final class DatabaseStoresIntegrationTest extends TestCase
 {
-    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
-    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function testStage3DbStoresEndToEnd(): void
     {
-        $db = $this->initDbOrSkip();
+        $db = $this->initDbOrFail();
         $dialect = $db->dialect();
 
         // Postgres views use digest(...) => requires pgcrypto extension.
@@ -120,11 +122,11 @@ final class DatabaseStoresIntegrationTest extends TestCase
         self::assertFalse($webauthn->finishAuthentication('sub-1', (string)$startAuth2['challenge'], 'cred-1', 1));
     }
 
-    private function initDbOrSkip(): Database
+    private function initDbOrFail(): Database
     {
         $dsn = (string)(getenv('DB_DSN') ?: '');
         if ($dsn === '') {
-            self::markTestSkipped('Set DB_DSN to run integration tests (e.g., mysql:... or pgsql:...).');
+            self::fail('Integration tests require a real DB. Set DB_DSN/DB_USER/DB_PASSWORD (use a disposable test database).');
         }
 
         Database::init([

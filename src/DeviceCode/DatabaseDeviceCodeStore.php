@@ -11,6 +11,7 @@ use BlackCat\Database\Support\BinaryCodec;
 final class DatabaseDeviceCodeStore implements DeviceCodeStoreInterface
 {
     private DeviceCodeRepository $codes;
+    private ?bool $ingressAvailable = null;
 
     public function __construct(
         Database $db,
@@ -31,9 +32,9 @@ final class DatabaseDeviceCodeStore implements DeviceCodeStoreInterface
         $expiresAt = self::formatSqlDateTimeFromEpoch($entry->expiresAt);
 
         $row = [
-            'device_code_hash' => $deviceCode,
+            'device_code_hash' => $this->hashForIngressOrSha256($deviceCode),
             'device_code' => $deviceCode,
-            'user_code_hash' => $userCode,
+            'user_code_hash' => $this->hashForIngressOrSha256($userCode),
             'client_id' => $entry->clientId,
             'scopes' => $scopesJson,
             'interval_sec' => $entry->interval,
@@ -51,9 +52,9 @@ final class DatabaseDeviceCodeStore implements DeviceCodeStoreInterface
         }
 
         // We intentionally UPDATE by selector (user_code_hash) to avoid needing device_code plaintext.
-        $existing = $this->codes->getByUserCodeHash($userCode, false);
+        $existing = $this->codes->getByUserCodeHash($this->hashForIngressOrSha256($userCode), false);
         if (!is_array($existing) || !isset($existing['id'])) {
-            $existing = $this->codes->getByDeviceCodeHash($deviceCode, false);
+            $existing = $this->codes->getByDeviceCodeHash($this->hashForIngressOrSha256($deviceCode), false);
         }
 
         $id = is_array($existing) ? (int)($existing['id'] ?? 0) : 0;
@@ -77,7 +78,7 @@ final class DatabaseDeviceCodeStore implements DeviceCodeStoreInterface
             return null;
         }
 
-        $row = $this->codes->getByDeviceCodeHash($deviceCode, false);
+        $row = $this->codes->getByDeviceCodeHash($this->hashForIngressOrSha256($deviceCode), false);
         if (!is_array($row)) {
             return null;
         }
@@ -92,7 +93,7 @@ final class DatabaseDeviceCodeStore implements DeviceCodeStoreInterface
             return null;
         }
 
-        $row = $this->codes->getByUserCodeHash($userCode, false);
+        $row = $this->codes->getByUserCodeHash($this->hashForIngressOrSha256($userCode), false);
         if (!is_array($row)) {
             return null;
         }
@@ -108,10 +109,10 @@ final class DatabaseDeviceCodeStore implements DeviceCodeStoreInterface
             return;
         }
 
-        $row = $this->codes->getByDeviceCodeHash($deviceCode, false);
+        $row = $this->codes->getByDeviceCodeHash($this->hashForIngressOrSha256($deviceCode), false);
         if (!is_array($row)) {
             // Allow deleting by user_code as a fallback.
-            $row = $this->codes->getByUserCodeHash($deviceCode, false);
+            $row = $this->codes->getByUserCodeHash($this->hashForIngressOrSha256($deviceCode), false);
         }
 
         $id = is_array($row) ? (int)($row['id'] ?? 0) : 0;
@@ -242,5 +243,30 @@ final class DatabaseDeviceCodeStore implements DeviceCodeStoreInterface
         $epochSec = max(0, $epochSec);
         $dt = (new \DateTimeImmutable('@' . $epochSec))->setTimezone(new \DateTimeZone('UTC'));
         return $dt->format('Y-m-d H:i:s.u');
+    }
+
+    private function hashForIngressOrSha256(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        if ($this->ingressIsAvailable()) {
+            return $value;
+        }
+
+        return hash('sha256', $value, true);
+    }
+
+    private function ingressIsAvailable(): bool
+    {
+        if ($this->ingressAvailable !== null) {
+            return $this->ingressAvailable;
+        }
+
+        // When required, adapter() throws -> do not swallow (fail-closed).
+        $this->ingressAvailable = IngressLocator::adapter() !== null;
+        return $this->ingressAvailable;
     }
 }

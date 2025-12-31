@@ -4,15 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6f98d9bf8fb0bfb6b70db9c0fd894c00",
+    "content-hash": "e5352817b99341dac922e9c986a7eb72",
     "packages": [
         {
             "name": "blackcat/crypto",
             "version": "dev-dev",
-            "dist": {
-                "type": "path",
-                "url": "/workspace/blackcat-crypto",
-                "reference": "382410d474897346ee8439ce6bdf3d348fc1cac8"
+            "source": {
+                "type": "git",
+                "url": "https://github.com/blackcatacademy/blackcat-crypto",
+                "reference": "ce1bb41955ca222c76981d4d33b81c0558a2127d"
             },
             "require": {
                 "ext-sodium": "*",
@@ -62,17 +62,15 @@
                 "security",
                 "xchacha20-poly1305"
             ],
-            "transport-options": {
-                "relative": false
-            }
+            "time": "2025-12-15T09:03:59+00:00"
         },
         {
             "name": "blackcatacademy/blackcat-config",
             "version": "dev-dev",
-            "dist": {
-                "type": "path",
-                "url": "/workspace/blackcat-config",
-                "reference": "afdbeb0500f6b8a1f2c4da64e856c711f828cf91"
+            "source": {
+                "type": "git",
+                "url": "https://github.com/blackcatacademy/blackcat-config",
+                "reference": "65347d5a7ffbe8dd383bc4f2559c320111a1b883"
             },
             "require": {
                 "ext-json": "*",
@@ -106,17 +104,15 @@
                 "proprietary"
             ],
             "description": "Secure configuration hub/layer for the BlackCat ecosystem (profiles, hardening checks, compatible config sources).",
-            "transport-options": {
-                "relative": false
-            }
+            "time": "2025-12-30T19:52:21+00:00"
         },
         {
             "name": "blackcatacademy/blackcat-core",
             "version": "dev-dev",
-            "dist": {
-                "type": "path",
-                "url": "/workspace/blackcat-core",
-                "reference": "077c3dac130fbc4b343ea2ce1a55fb62bbdd5206"
+            "source": {
+                "type": "git",
+                "url": "https://github.com/blackcatacademy/blackcat-core",
+                "reference": "c229e794d83df9886ba9f20bbdd121c0bba61a4a"
             },
             "require": {
                 "ext-json": "*",
@@ -207,17 +203,15 @@
                 "issues": "https://github.com/blackcatacademy/blackcat-core/issues",
                 "source": "https://github.com/blackcatacademy/blackcat-core"
             },
-            "transport-options": {
-                "relative": false
-            }
+            "time": "2025-12-15T00:59:37+00:00"
         },
         {
             "name": "blackcatacademy/blackcat-database",
             "version": "dev-dev",
-            "dist": {
-                "type": "path",
-                "url": "/workspace/blackcat-database",
-                "reference": "859892cca9f4c3fdfa1cbf55626fd1aec09d9e00"
+            "source": {
+                "type": "git",
+                "url": "https://github.com/blackcatacademy/blackcat-database",
+                "reference": "2bb27dc58bdac5275c9d405c99a90329d0102d71"
             },
             "require": {
                 "blackcat/crypto": "dev-dev as dev-main",
@@ -289,17 +283,15 @@
                 "issues": "https://github.com/blackcatacademy/blackcat-database/issues",
                 "source": "https://github.com/blackcatacademy/blackcat-database"
             },
-            "transport-options": {
-                "relative": false
-            }
+            "time": "2025-12-19T00:39:20+00:00"
         },
         {
             "name": "blackcatacademy/blackcat-database-crypto",
             "version": "dev-dev",
-            "dist": {
-                "type": "path",
-                "url": "/workspace/blackcat-database-crypto",
-                "reference": "894d27299ce7885cabe55c546b5850130c2399da"
+            "source": {
+                "type": "git",
+                "url": "https://github.com/blackcatacademy/blackcat-database-crypto",
+                "reference": "a9314af8de57a999bff9a6f756aeb92397239d0e"
             },
             "require": {
                 "blackcat/crypto": "dev-dev as dev-main",
@@ -329,16 +321,14 @@
                 "proprietary"
             ],
             "description": "Transparent crypto adapter for BlackCat Database writes (field-level envelope encryption + HMAC).",
-            "transport-options": {
-                "relative": false
-            }
+            "time": "2025-12-22T19:17:10+00:00"
         },
         {
             "name": "blackcatacademy/blackcat-mailing",
             "version": "dev-dev",
-            "dist": {
-                "type": "path",
-                "url": "/workspace/blackcat-mailing",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/blackcatacademy/blackcat-mailing",
                 "reference": "2048892f9f200211a10b06e1e1cdb2946cbd08da"
             },
             "require": {
@@ -372,17 +362,15 @@
                 "proprietary"
             ],
             "description": "DB-backed notifications + SMTP mail worker for the BlackCat ecosystem.",
-            "transport-options": {
-                "relative": false
-            }
+            "time": "2025-12-15T01:32:47+00:00"
         },
         {
             "name": "blackcatacademy/blackcat-sessions",
             "version": "dev-dev",
-            "dist": {
-                "type": "path",
-                "url": "/workspace/blackcat-sessions",
-                "reference": "0a429cc0a944655f744ba3fbbb2b26d15a441dc2"
+            "source": {
+                "type": "git",
+                "url": "https://github.com/blackcatacademy/blackcat-sessions",
+                "reference": "65c2b29b75691335d108ff14751c2af0da26163c"
             },
             "require": {
                 "blackcatacademy/blackcat-core": "dev-dev",
@@ -412,9 +400,7 @@
                 "proprietary"
             ],
             "description": "DB-backed sessions module for the BlackCat ecosystem.",
-            "transport-options": {
-                "relative": false
-            }
+            "time": "2025-12-15T01:27:21+00:00"
         },
         {
             "name": "phpmailer/phpmailer",
@@ -2425,11 +2411,11 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "blackcatacademy/blackcat-config": 20,
         "blackcatacademy/blackcat-core": 20,
+        "blackcatacademy/blackcat-config": 20,
         "blackcatacademy/blackcat-database": 20,
-        "blackcatacademy/blackcat-mailing": 20,
-        "blackcatacademy/blackcat-sessions": 20
+        "blackcatacademy/blackcat-sessions": 20,
+        "blackcatacademy/blackcat-mailing": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
@@ -2438,6 +2424,6 @@
         "ext-pdo": "*",
         "ext-sodium": "*"
     },
-    "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "platform-dev": [],
+    "plugin-api-version": "2.6.0"
 }

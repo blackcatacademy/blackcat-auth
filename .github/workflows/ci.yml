@@ -52,8 +52,13 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
+      - name: Init blackcat-database packages
+        run: |
+          git -C vendor/blackcatacademy/blackcat-database submodule update --init packages/auth-events packages/device-codes packages/email-verifications packages/login-attempts packages/magic-links packages/notifications packages/password-resets packages/rate-limit-counters packages/register-events packages/sessions packages/tenants packages/users packages/verify-events packages/webauthn-challenges packages/webauthn-credentials
+          composer dump-autoload -o
+
       - name: Static analysis
-        run: vendor/bin/phpstan analyse --configuration=phpstan.neon
+        run: vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=1G
 
       - name: Tests (unit + integration)
         env:
