@@ -21,11 +21,13 @@ final class InMemoryWebAuthnStore implements WebAuthnStoreInterface
         return $this->credentials[$subject] ?? [];
     }
 
+    /** @param array<string,mixed> $metadata */
     public function rememberChallenge(string $challenge, array $metadata): void
     {
         $this->challenges[$challenge] = $metadata;
     }
 
+    /** @return array<string,mixed>|null */
     public function consumeChallenge(string $challenge): ?array
     {
         if (!isset($this->challenges[$challenge])) {
@@ -34,5 +36,21 @@ final class InMemoryWebAuthnStore implements WebAuthnStoreInterface
         $metadata = $this->challenges[$challenge];
         unset($this->challenges[$challenge]);
         return $metadata;
+    }
+
+    public function touchCredential(string $subject, string $credentialId, ?int $signCount = null): bool
+    {
+        $subject = trim($subject);
+        $credentialId = trim($credentialId);
+        if ($subject === '' || $credentialId === '') {
+            return false;
+        }
+
+        foreach ($this->credentials[$subject] ?? [] as $cred) {
+            if ($cred instanceof WebAuthnCredential && $cred->id === $credentialId) {
+                return true;
+            }
+        }
+        return false;
     }
 }

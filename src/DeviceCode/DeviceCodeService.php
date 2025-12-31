@@ -14,7 +14,7 @@ final class DeviceCodeService
 
     /**
      * @param list<string> $scopes
-     * @return array<string,mixed>
+     * @return array{device_code:string,user_code:string,verification_uri:string,verification_uri_complete:string,expires_in:int,interval:int}
      */
     public function issue(string $clientId, array $scopes): array
     {
@@ -41,7 +41,7 @@ final class DeviceCodeService
 
     /**
      * @param array<string,mixed> $tokens
-     * @return array{status:string,error?:string}
+     * @return array{status:'approved'}|array{status:'error',error:string}
      */
     public function approve(string $userCode, array $tokens): array
     {
@@ -58,7 +58,7 @@ final class DeviceCodeService
     }
 
     /**
-     * @return array{status:string,error?:string,tokens?:array<string,mixed>}
+     * @return array{status:'approved',tokens:array<string,mixed>}|array{status:'pending',error:string}|array{status:'error',error:string}
      */
     public function poll(string $deviceCode): array
     {
@@ -77,6 +77,10 @@ final class DeviceCodeService
             return ['status' => 'error', 'error' => 'invalid_grant'];
         }
         $this->store->delete($deviceCode);
-        return ['status' => 'approved', 'tokens' => $entry->tokens()];
+        $tokens = $entry->tokens();
+        if (!is_array($tokens)) {
+            return ['status' => 'error', 'error' => 'invalid_grant'];
+        }
+        return ['status' => 'approved', 'tokens' => $tokens];
     }
 }

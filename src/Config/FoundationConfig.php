@@ -7,13 +7,10 @@ use InvalidArgumentException;
 
 final class FoundationConfig
 {
-    /** @var array<string,mixed> */
-    private array $payload;
-
-    private function __construct(private readonly array $resolved, private readonly string $path)
-    {
-        $this->payload = $resolved;
-    }
+    /**
+     * @param array<string,mixed> $payload
+     */
+    private function __construct(private readonly array $payload, private readonly string $path) {}
 
     public static function fromFile(string $path): self
     {
@@ -79,6 +76,17 @@ final class FoundationConfig
     {
         $cli = $this->payload['cli'] ?? [];
         return is_array($cli) ? $cli : [];
+    }
+
+    /**
+     * Mailing configuration for DB-backed notification delivery (optional).
+     *
+     * @return array<string,mixed>
+     */
+    public function mailing(): array
+    {
+        $mailing = $this->payload['mailing'] ?? [];
+        return is_array($mailing) ? $mailing : [];
     }
 
     /**
@@ -188,7 +196,11 @@ final class FoundationConfig
         }
         $sessionStore = $auth['session']['store'] ?? null;
         if (is_array($sessionStore) && $sessionStore !== []) {
-            $env['BLACKCAT_AUTH_SESSION_STORE'] = json_encode($sessionStore, JSON_UNESCAPED_SLASHES);
+            try {
+                $env['BLACKCAT_AUTH_SESSION_STORE'] = json_encode($sessionStore, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                throw new InvalidArgumentException('Invalid auth.session.store config (must be JSON-serializable).', 0, $e);
+            }
         }
 
         $magic = $auth['magic_link'] ?? [];
@@ -198,6 +210,21 @@ final class FoundationConfig
         if (isset($magic['url'])) {
             $env['BLACKCAT_AUTH_MAGICLINK_URL'] = (string) $magic['url'];
         }
+        if (is_array($magic) && array_key_exists('dev_return_token', $magic)) {
+            $env['BLACKCAT_AUTH_DEV_RETURN_MAGICLINK_TOKEN'] = (string) $magic['dev_return_token'];
+        }
+        $magicThrottle = $magic['throttle'] ?? null;
+        if (is_array($magicThrottle)) {
+            if (array_key_exists('window_sec', $magicThrottle)) {
+                $env['BLACKCAT_AUTH_MAGICLINK_THROTTLE_WINDOW_SEC'] = (string)$magicThrottle['window_sec'];
+            }
+            if (array_key_exists('max_per_ip', $magicThrottle)) {
+                $env['BLACKCAT_AUTH_MAGICLINK_THROTTLE_MAX_PER_IP'] = (string)$magicThrottle['max_per_ip'];
+            }
+            if (array_key_exists('max_per_email', $magicThrottle)) {
+                $env['BLACKCAT_AUTH_MAGICLINK_THROTTLE_MAX_PER_EMAIL'] = (string)$magicThrottle['max_per_email'];
+            }
+        }
 
         if (isset($auth['webauthn']['rp_id'])) {
             $env['BLACKCAT_AUTH_WEBAUTHN_RP_ID'] = (string) $auth['webauthn']['rp_id'];
@@ -205,19 +232,92 @@ final class FoundationConfig
         if (isset($auth['webauthn']['rp_name'])) {
             $env['BLACKCAT_AUTH_WEBAUTHN_RP_NAME'] = (string) $auth['webauthn']['rp_name'];
         }
+        if (isset($auth['webauthn']['challenge_ttl'])) {
+            $env['BLACKCAT_AUTH_WEBAUTHN_CHALLENGE_TTL'] = (string) $auth['webauthn']['challenge_ttl'];
+        }
 
         if (isset($auth['roles'])) {
-            $env['BLACKCAT_AUTH_ROLES'] = json_encode($auth['roles'], JSON_UNESCAPED_SLASHES);
+            try {
+                $env['BLACKCAT_AUTH_ROLES'] = json_encode($auth['roles'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                throw new InvalidArgumentException('Invalid auth.roles config (must be JSON-serializable).', 0, $e);
+            }
         }
         if (isset($auth['clients'])) {
-            $env['BLACKCAT_AUTH_CLIENTS'] = json_encode($auth['clients'], JSON_UNESCAPED_SLASHES);
+            try {
+                $env['BLACKCAT_AUTH_CLIENTS'] = json_encode($auth['clients'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                throw new InvalidArgumentException('Invalid auth.clients config (must be JSON-serializable).', 0, $e);
+            }
         }
 
         if (isset($auth['events']['buffer_size'])) {
             $env['BLACKCAT_AUTH_EVENTS_BUFFER'] = (string) $auth['events']['buffer_size'];
         }
         if (isset($auth['events']['webhooks'])) {
-            $env['BLACKCAT_AUTH_EVENT_WEBHOOKS'] = json_encode($auth['events']['webhooks'], JSON_UNESCAPED_SLASHES);
+            try {
+                $env['BLACKCAT_AUTH_EVENT_WEBHOOKS'] = json_encode($auth['events']['webhooks'], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                throw new InvalidArgumentException('Invalid auth.events.webhooks config (must be JSON-serializable).', 0, $e);
+            }
+        }
+
+        $registration = $auth['registration'] ?? null;
+        if (is_array($registration)) {
+            if (array_key_exists('require_email_verification', $registration)) {
+                $env['BLACKCAT_AUTH_REQUIRE_EMAIL_VERIFICATION'] = (string)$registration['require_email_verification'];
+            }
+            if (array_key_exists('email_verification_ttl', $registration)) {
+                $env['BLACKCAT_AUTH_EMAIL_VERIFICATION_TTL'] = (string)$registration['email_verification_ttl'];
+            }
+            if (array_key_exists('email_verification_link_template', $registration)) {
+                $env['BLACKCAT_AUTH_EMAIL_VERIFICATION_LINK_TEMPLATE'] = (string)$registration['email_verification_link_template'];
+            }
+            if (array_key_exists('dev_return_verification_token', $registration)) {
+                $env['BLACKCAT_AUTH_DEV_RETURN_VERIFICATION_TOKEN'] = (string)$registration['dev_return_verification_token'];
+            }
+            if (array_key_exists('password_min_length', $registration)) {
+                $env['BLACKCAT_AUTH_PASSWORD_MIN_LENGTH'] = (string)$registration['password_min_length'];
+            }
+
+            $resendThrottle = $registration['verify_email_resend_throttle'] ?? null;
+            if (is_array($resendThrottle)) {
+                if (array_key_exists('window_sec', $resendThrottle)) {
+                    $env['BLACKCAT_AUTH_VERIFY_EMAIL_RESEND_THROTTLE_WINDOW_SEC'] = (string)$resendThrottle['window_sec'];
+                }
+                if (array_key_exists('max_per_ip', $resendThrottle)) {
+                    $env['BLACKCAT_AUTH_VERIFY_EMAIL_RESEND_THROTTLE_MAX_PER_IP'] = (string)$resendThrottle['max_per_ip'];
+                }
+                if (array_key_exists('max_per_email', $resendThrottle)) {
+                    $env['BLACKCAT_AUTH_VERIFY_EMAIL_RESEND_THROTTLE_MAX_PER_EMAIL'] = (string)$resendThrottle['max_per_email'];
+                }
+            }
+        }
+
+        $reset = $auth['password_reset'] ?? null;
+        if (is_array($reset)) {
+            if (array_key_exists('ttl', $reset)) {
+                $env['BLACKCAT_AUTH_PASSWORD_RESET_TTL'] = (string)$reset['ttl'];
+            }
+            if (array_key_exists('link_template', $reset)) {
+                $env['BLACKCAT_AUTH_PASSWORD_RESET_LINK_TEMPLATE'] = (string)$reset['link_template'];
+            }
+            if (array_key_exists('dev_return_token', $reset)) {
+                $env['BLACKCAT_AUTH_DEV_RETURN_PASSWORD_RESET_TOKEN'] = (string)$reset['dev_return_token'];
+            }
+
+            $resetThrottle = $reset['throttle'] ?? null;
+            if (is_array($resetThrottle)) {
+                if (array_key_exists('window_sec', $resetThrottle)) {
+                    $env['BLACKCAT_AUTH_PASSWORD_RESET_THROTTLE_WINDOW_SEC'] = (string)$resetThrottle['window_sec'];
+                }
+                if (array_key_exists('max_per_ip', $resetThrottle)) {
+                    $env['BLACKCAT_AUTH_PASSWORD_RESET_THROTTLE_MAX_PER_IP'] = (string)$resetThrottle['max_per_ip'];
+                }
+                if (array_key_exists('max_per_email', $resetThrottle)) {
+                    $env['BLACKCAT_AUTH_PASSWORD_RESET_THROTTLE_MAX_PER_EMAIL'] = (string)$resetThrottle['max_per_email'];
+                }
+            }
         }
 
         return $env;

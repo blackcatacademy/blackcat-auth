@@ -124,7 +124,11 @@ final class UserStoreFactory
     }
 
     /**
-     * Optional: allow auth config to configure DB crypto ingress without env vars.
+     * Optional: allow auth config to provide a keys_dir override (dev-only).
+     *
+     * Security:
+     * - If `blackcat-config` runtime config is initialized, it remains the single source of truth.
+     * - This prevents lower-trust config files from redirecting the crypto boundary.
      *
      * @param array<string,mixed> $config
      */
@@ -134,11 +138,23 @@ final class UserStoreFactory
         if (!is_array($ingress)) {
             return;
         }
-        $mapPath = $ingress['map_path'] ?? $ingress['map'] ?? null;
+
         $keysDir = $ingress['keys_dir'] ?? $ingress['keysDir'] ?? null;
-        if ($mapPath || $keysDir) {
-            IngressLocator::configure($mapPath ? (string)$mapPath : null, $keysDir ? (string)$keysDir : null);
+        if (!is_string($keysDir) || trim($keysDir) === '') {
+            return;
         }
+
+        // If runtime config is initialized, do not allow this config file to override the crypto boundary.
+        if (class_exists('\\BlackCat\\Config\\Runtime\\Config')) {
+            if (!\BlackCat\Config\Runtime\Config::isInitialized()) {
+                \BlackCat\Config\Runtime\Config::tryInitFromFirstAvailableJsonFile();
+            }
+            if (\BlackCat\Config\Runtime\Config::isInitialized()) {
+                return;
+            }
+        }
+
+        IngressLocator::configure(null, $keysDir);
     }
 
     private static function requireIngressCriteriaAdapter(): void

@@ -5,6 +5,9 @@ namespace BlackCat\Auth\Pkce;
 
 final class PkceSession
 {
+    /**
+     * @param list<string> $scopes
+     */
     public function __construct(
         public readonly string $code,
         public readonly string $clientId,

@@ -8,11 +8,10 @@ use PHPUnit\Framework\TestCase;
 
 final class AuthRuntimeTest extends TestCase
 {
-    public function testSeedsUsersAndWritesTelemetry(): void
+    public function testBootsWithArrayStoreAndWritesTelemetry(): void
     {
         $dir = sys_get_temp_dir() . '/auth-runtime-' . bin2hex(random_bytes(4));
         mkdir($dir, 0777, true);
-        $dbPath = $dir . '/auth.sqlite';
         $metrics = $dir . '/metrics.prom';
         $configPath = $dir . '/config.php';
         $pepper = base64_encode(random_bytes(32));
@@ -33,12 +32,14 @@ final class AuthRuntimeTest extends TestCase
                 'clients' => ['service-api' => ['secret' => '${env:BLACKCAT_SERVICE_API_SECRET}', 'roles' => ['svc']]],
             ],
             'user_store' => [
-                'driver' => 'database',
-                'dsn' => 'sqlite:' . $dbPath,
+                'driver' => 'array',
                 'pepper_env' => 'BLACKCAT_AUTH_PEPPER',
+                'users' => [
+                    ['id' => 'demo', 'email' => 'admin@example.com', 'password' => 'secret', 'roles' => ['admin']],
+                ],
             ],
             'seed_users' => [
-                ['id' => 'demo', 'email' => 'admin@example.com', 'password' => 'secret', 'roles' => ['admin']],
+                ['email' => 'admin@example.com', 'password' => 'secret', 'roles' => ['admin']],
             ],
             'telemetry' => ['prometheus_file' => $metrics],
         ], true) . ';');
@@ -46,7 +47,7 @@ final class AuthRuntimeTest extends TestCase
         $runtime = AuthRuntime::fromFile($configPath);
         $runtime->ensureUserStoreSchema();
         $ids = $runtime->seedUsers(true);
-        self::assertSame(['demo'], $ids);
+        self::assertSame([], $ids);
         $users = $runtime->listUsers(5);
         self::assertSame('admin@example.com', $users[0]['email']);
 

@@ -9,6 +9,7 @@ final class PolicyDecisionPoint
 {
     public function __construct(private readonly RoleRegistry $roles, private readonly LoggerInterface $logger) {}
 
+    /** @param array<string,mixed> $claims */
     public function allow(string $requiredRole, array $claims): bool
     {
         $userRoles = $claims['roles'] ?? [];

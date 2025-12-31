@@ -17,10 +17,13 @@ final class Pepper
 
     public function release(): void
     {
+        $len = strlen($this->bytes);
+
         if (function_exists('sodium_memzero')) {
-            @sodium_memzero($this->bytes);
-        } else {
-            $this->bytes = str_repeat("\0", strlen($this->bytes));
+            $copy = $this->bytes;
+            @sodium_memzero($copy);
         }
+
+        $this->bytes = str_repeat("\0", $len);
     }
 }

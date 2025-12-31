@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace BlackCat\Auth\Foundation;
 
+use BlackCat\Core\Database;
 use BlackCat\Auth\Identity\IdentityProviderInterface;
 use BlackCat\Auth\Password\PasswordHasher;
 
@@ -10,7 +11,7 @@ final class UserStoreInstance
 {
     public function __construct(
         private readonly IdentityProviderInterface $provider,
-        private readonly ?\PDO $pdo,
+        private readonly ?Database $db,
         private readonly ?PasswordHasher $hasher
     ) {
     }
@@ -20,9 +21,9 @@ final class UserStoreInstance
         return $this->provider;
     }
 
-    public function pdo(): ?\PDO
+    public function db(): ?Database
     {
-        return $this->pdo;
+        return $this->db;
     }
 
     public function hasher(): ?PasswordHasher

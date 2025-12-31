@@ -10,6 +10,7 @@ final class UsersSeedCommand implements CommandInterface
     public function name(): string { return 'users:seed'; }
     public function description(): string { return 'Create or update seed users defined in config.'; }
 
+    /** @param list<string> $args */
     public function run(array $args, AuthRuntime $runtime): int
     {
         $force = in_array('--force', $args, true);

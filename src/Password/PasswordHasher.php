@@ -5,6 +5,9 @@ namespace BlackCat\Auth\Password;
 
 final class PasswordHasher
 {
+    /**
+     * @param array<string,int> $options
+     */
     public function __construct(
         private readonly PepperProviderInterface $pepper,
         private readonly array $options = []
@@ -19,10 +22,21 @@ final class PasswordHasher
         if (function_exists('sodium_memzero')) {
             @sodium_memzero($pre);
         }
-        if ($hash === false) {
-            throw new \RuntimeException('password_hash failed');
-        }
         return $hash;
+    }
+
+    /**
+     * Return the current pepper version for DB storage.
+     *
+     * This enables deterministic selection of the correct pepper during verification
+     * (and faster fallbacks during rotation) without exposing the pepper itself.
+     */
+    public function currentPepperVersion(): string
+    {
+        $pep = $this->pepper->current();
+        $version = $pep->version;
+        $pep->release();
+        return $version;
     }
 
     public function algorithmName(string $hash): string
@@ -63,6 +77,7 @@ final class PasswordHasher
         return new PasswordVerificationResult(false, null);
     }
 
+    /** @return array<string,int> */
     private function defaultOptions(): array
     {
         return [

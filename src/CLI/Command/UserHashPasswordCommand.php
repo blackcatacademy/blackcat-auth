@@ -10,6 +10,7 @@ final class UserHashPasswordCommand implements CommandInterface
     public function name(): string { return 'user:hash-password'; }
     public function description(): string { return 'Hash a password with the configured pepper provider (for seeding DB).'; }
 
+    /** @param list<string> $args */
     public function run(array $args, AuthRuntime $runtime): int
     {
         $password = null;
@@ -34,7 +35,7 @@ final class UserHashPasswordCommand implements CommandInterface
         $hash = $hasher->hash($password);
         echo json_encode([
             'hash' => $hash,
-            'pepper_version' => 'env',
+            'pepper_version' => $hasher->currentPepperVersion(),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
         return 0;
     }

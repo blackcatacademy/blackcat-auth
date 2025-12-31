@@ -38,6 +38,9 @@ final class Application
         $this->commands[$command->name()] = $command;
     }
 
+    /**
+     * @param list<string> $args
+     */
     public function run(string $command, array $args): int
     {
         if ($command === 'help' || !isset($this->commands[$command])) {

@@ -11,11 +11,13 @@ final class WebAuthnService
         private readonly string $rpName,
     ) {}
 
+    /** @return array{id:string,name:string} */
     public function relyingParty(): array
     {
         return ['id' => $this->rpId, 'name' => $this->rpName];
     }
 
+    /** @return array{challenge:string,rp:array{id:string,name:string},excludeCredentials:list<string>} */
     public function startRegistration(string $subject): array
     {
         $challenge = $this->challenge();
@@ -43,6 +45,7 @@ final class WebAuthnService
         return true;
     }
 
+    /** @return array{challenge:string,allowCredentials:list<string>}|null */
     public function startAuthentication(string $subject): ?array
     {
         $credentials = $this->store->loadCredentials($subject);
@@ -65,7 +68,7 @@ final class WebAuthnService
         ];
     }
 
-    public function finishAuthentication(string $subject, string $challenge, string $credentialId): bool
+    public function finishAuthentication(string $subject, string $challenge, string $credentialId, ?int $signCount = null): bool
     {
         $metadata = $this->store->consumeChallenge($challenge);
         if (!$metadata || ($metadata['type'] ?? '') !== 'authenticate') {
@@ -81,7 +84,7 @@ final class WebAuthnService
         $credentials = $this->store->loadCredentials($subject);
         foreach ($credentials as $credential) {
             if ($credential->id === $credentialId) {
-                return true;
+                return $this->store->touchCredential($subject, $credentialId, $signCount);
             }
         }
         return false;

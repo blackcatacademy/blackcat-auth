@@ -10,8 +10,10 @@ final class SecurityCheckCommand implements CommandInterface
     public function name(): string { return 'security:check'; }
     public function description(): string { return 'Run basic health/security checks for config, database, and telemetry.'; }
 
+    /** @param list<string> $args */
     public function run(array $args, AuthRuntime $runtime): int
     {
+        unset($args);
         $report = $runtime->healthReport();
         $signingOk = ($report['signing_key_length'] ?? 0) >= 32;
         $status = [

@@ -5,6 +5,8 @@ namespace BlackCat\Auth;
 
 use BlackCat\Auth\Config\AuthConfig;
 use BlackCat\Auth\Identity\IdentityProviderInterface;
+use BlackCat\Auth\Security\LoginLimiter;
+use BlackCat\Auth\Security\TooManyAttemptsException;
 use BlackCat\Auth\Token\TokenService;
 use BlackCat\Auth\Token\TokenPair;
 use BlackCat\Auth\Rbac\PolicyDecisionPoint;
@@ -15,11 +17,11 @@ use BlackCat\Auth\Pkce\InMemoryPkceStore;
 use BlackCat\Auth\Pkce\PkceHelper;
 use BlackCat\Auth\Pkce\PkceSession;
 use BlackCat\Auth\Pkce\PkceStoreInterface;
-use BlackCat\Auth\Session\SessionService;
-use BlackCat\Auth\Session\SessionRecord;
 use BlackCat\Auth\MagicLink\MagicLinkService;
 use BlackCat\Auth\Support\AuthEventHookInterface;
 use BlackCat\Auth\Support\NullAuthEventHook;
+use BlackCat\Sessions\SessionRecord;
+use BlackCat\Sessions\SessionService;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -72,19 +74,54 @@ final class AuthManager
         return $this->passwordGrant($username, $password);
     }
 
+    /**
+     * @param array<string,mixed> $options
+     */
     public function passwordGrant(string $username, string $password, array $options = []): TokenPair
     {
+        $clientIp = (string)($options['client_ip'] ?? $options['ip'] ?? '');
+        $clientIp = trim($clientIp) !== '' ? trim($clientIp) : null;
+
+        try {
+            if (LoginLimiter::isBlocked($clientIp)) {
+                $retry = LoginLimiter::getSecondsUntilUnblock($clientIp);
+                $this->hook->onFailure('password_grant', [
+                    'username' => $username,
+                    'reason' => 'rate_limited',
+                    'retry_after' => $retry,
+                ]);
+                $this->logger->warning('auth.rate-limited', ['username' => $username, 'retry_after' => $retry]);
+                throw new TooManyAttemptsException($retry);
+            }
+        } catch (TooManyAttemptsException $e) {
+            throw $e;
+        } catch (\Throwable) {
+            // fail-open: limiter must never break auth
+        }
+
         $identity = $this->provider->validateCredentials($username, $password);
         if ($identity === null) {
+            try {
+                LoginLimiter::registerAttempt($clientIp, false, null, $username);
+            } catch (\Throwable) {
+            }
             $this->hook->onFailure('password_grant', ['username' => $username, 'reason' => 'invalid_credentials']);
             $this->logger->warning('auth.invalid-credentials', ['username' => $username]);
             throw new \RuntimeException('Invalid credentials');
+        }
+        try {
+            $userId = (int)$identity['id'];
+            LoginLimiter::registerAttempt($clientIp, true, $userId > 0 ? $userId : null, $username);
+        } catch (\Throwable) {
         }
         $claims = $this->provider->claims($identity);
         $this->hook->onSuccess('password_grant', ['username' => $username, 'subject' => $claims['sub'] ?? null]);
         return $this->tokens->issue($identity, $claims, $options);
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function verifyAccessToken(string $token): array
     {
         return $this->tokens->verify($token);
@@ -102,6 +139,9 @@ final class AuthManager
         return $this->tokens->issue($identity, $this->provider->claims($identity));
     }
 
+    /**
+     * @param array<string,mixed> $claims
+     */
     public function enforce(string $requiredRole, array $claims): void
     {
         if (!$this->pdp->allow($requiredRole, $claims)) {
@@ -126,6 +166,9 @@ final class AuthManager
         };
     }
 
+    /**
+     * @param list<string> $scopes
+     */
     public function clientCredentials(string $clientId, string $clientSecret, array $scopes = []): TokenPair
     {
         $client = $this->clients->verify($clientId, $clientSecret);
@@ -148,6 +191,9 @@ final class AuthManager
         return $pair;
     }
 
+    /**
+     * @param list<string> $scopes
+     */
     public function initiatePkce(
         string $clientId,
         string $username,
@@ -163,12 +209,39 @@ final class AuthManager
             $this->hook->onFailure('pkce_authorize', ['client_id' => $clientId, 'reason' => 'pkce_disabled']);
             throw new \RuntimeException('pkce_not_allowed');
         }
+
+        try {
+            if (LoginLimiter::isBlocked(null)) {
+                $retry = LoginLimiter::getSecondsUntilUnblock(null);
+                $this->hook->onFailure('pkce_authorize', [
+                    'client_id' => $clientId,
+                    'username' => $username,
+                    'reason' => 'rate_limited',
+                    'retry_after' => $retry,
+                ]);
+                throw new TooManyAttemptsException($retry);
+            }
+        } catch (TooManyAttemptsException $e) {
+            throw $e;
+        } catch (\Throwable) {
+            // fail-open
+        }
+
         $identity = $this->provider->validateCredentials($username, $password);
         if ($identity === null) {
+            try {
+                LoginLimiter::registerAttempt(null, false, null, $username);
+            } catch (\Throwable) {
+            }
             $this->hook->onFailure('pkce_authorize', ['client_id' => $clientId, 'username' => $username, 'reason' => 'invalid_credentials']);
             throw new \RuntimeException('Invalid credentials');
         }
-        $subjectId = (string)($identity['id'] ?? '');
+        try {
+            $userId = (int)$identity['id'];
+            LoginLimiter::registerAttempt(null, true, $userId > 0 ? $userId : null, $username);
+        } catch (\Throwable) {
+        }
+        $subjectId = (string)$identity['id'];
         if ($subjectId === '') {
             throw new \RuntimeException('missing_identity');
         }
@@ -243,6 +316,9 @@ final class AuthManager
         return $this->magicLinks;
     }
 
+    /**
+     * @return array<string,mixed>|null
+     */
     public function findIdentityByEmail(string $email): ?array
     {
         if (method_exists($this->provider, 'lookupByEmail')) {
@@ -267,12 +343,20 @@ final class AuthManager
         return null;
     }
 
+    /**
+     * @param array<string,mixed> $identity
+     * @param array<string,mixed> $claimsOverride
+     * @param array<string,mixed> $options
+     */
     public function issueForIdentity(array $identity, array $claimsOverride = [], array $options = []): TokenPair
     {
         $claims = array_merge($this->provider->claims($identity), $claimsOverride);
         return $this->tokens->issue($identity, $claims, $options);
     }
 
+    /**
+     * @return array<string,mixed>|null
+     */
     public function findIdentityById(string $id): ?array
     {
         return $this->provider->findById($id);

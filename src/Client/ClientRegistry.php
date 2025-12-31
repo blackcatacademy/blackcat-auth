@@ -3,15 +3,27 @@ declare(strict_types=1);
 
 namespace BlackCat\Auth\Client;
 
+/**
+ * @phpstan-type ClientRecord array{
+ *   secret: string,
+ *   roles: list<string>,
+ *   scopes: list<string>,
+ *   access_ttl: int|null,
+ *   pkce: bool
+ * }
+ */
 final class ClientRegistry
 {
     /**
-     * @param array<string,array<string,mixed>> $clients
+     * @param array<string,ClientRecord> $clients
      */
     public function __construct(private readonly array $clients)
     {
     }
 
+    /**
+     * @param array<string,array<string,mixed>> $clients
+     */
     public static function fromArray(array $clients): self
     {
         $normalized = [];
@@ -30,11 +42,13 @@ final class ClientRegistry
         return new self($normalized);
     }
 
+    /** @return ClientRecord|null */
     public function find(string $clientId): ?array
     {
         return $this->clients[$clientId] ?? null;
     }
 
+    /** @return ClientRecord|null */
     public function verify(string $clientId, string $secret): ?array
     {
         $client = $this->find($clientId);

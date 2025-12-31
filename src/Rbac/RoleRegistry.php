@@ -8,16 +8,22 @@ final class RoleRegistry
     /** @var array<string,array{permissions:list<string>,inherits:list<string>}> */
     private array $roles = [];
 
+    /**
+     * @param array<string,array<string,mixed>> $roles
+     */
     public function __construct(array $roles)
     {
         foreach ($roles as $name => $def) {
             $this->roles[$name] = [
-                'permissions' => $def['permissions'] ?? [],
-                'inherits' => $def['inherits'] ?? [],
+                'permissions' => array_values(array_filter((array)($def['permissions'] ?? []), 'is_string')),
+                'inherits' => array_values(array_filter((array)($def['inherits'] ?? []), 'is_string')),
             ];
         }
     }
 
+    /**
+     * @param array<string,array<string,mixed>> $roles
+     */
     public static function fromArray(array $roles): self
     {
         return new self($roles);

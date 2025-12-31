@@ -11,8 +11,10 @@ final class RbacListCommand implements CommandInterface
     public function name(): string { return 'rbac:list'; }
     public function description(): string { return 'List configured roles and permissions.'; }
 
+    /** @param list<string> $args */
     public function run(array $args, AuthRuntime $runtime): int
     {
+        unset($args);
         $config = $runtime->authConfig();
         $registry = RoleRegistry::fromArray($config->roles());
         foreach ($config->roles() as $role => $_) {

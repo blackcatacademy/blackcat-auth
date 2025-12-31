@@ -10,6 +10,7 @@ final class ConfigShowCommand implements CommandInterface
     public function name(): string { return 'config:show'; }
     public function description(): string { return 'Show resolved configuration summary (issuer, TTLs, telemetry).'; }
 
+    /** @param list<string> $args */
     public function run(array $args, AuthRuntime $runtime): int
     {
         $config = $runtime->authConfig();

@@ -22,7 +22,19 @@ final class UsersListCommand implements CommandInterface
         foreach ($rows as $user) {
             $roles = $user['roles'] ?? [];
             $rolesStr = $roles ? implode(',', $roles) : '-';
-            echo sprintf("%s\t%s\t%s\t%s\n", $user['id'] ?? '-', $user['email'] ?? '-', $rolesStr, $user['status'] ?? 'unknown');
+
+            $principal = $user['email'] ?? ($user['email_hash'] ?? '-');
+
+            $status = $user['status'] ?? null;
+            if ($status === null) {
+                $isActive = $user['is_active'] ?? null;
+                $isLocked = $user['is_locked'] ?? null;
+                if ($isActive !== null || $isLocked !== null) {
+                    $status = ($isActive ? 'active' : 'inactive') . ($isLocked ? ',locked' : '');
+                }
+            }
+
+            echo sprintf("%s\t%s\t%s\t%s\n", $user['id'] ?? '-', $principal, $rolesStr, $status ?? 'unknown');
         }
         return 0;
     }

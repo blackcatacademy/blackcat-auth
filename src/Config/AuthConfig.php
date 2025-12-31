@@ -7,6 +7,12 @@ use BlackCat\Config\Runtime\Config as RuntimeConfig;
 
 final class AuthConfig
 {
+    /**
+     * @param array<string,mixed> $roles
+     * @param array<string,mixed> $clients
+     * @param array<string,mixed> $sessionStore
+     * @param list<string> $eventWebhooks
+     */
     public function __construct(
         private readonly string $issuer,
         private readonly string $audience,
@@ -46,6 +52,9 @@ final class AuthConfig
         private readonly int $verifyEmailResendThrottleMaxPerEmail = 3,
     ) {}
 
+    /**
+     * @param array<string,mixed> $env
+     */
     public static function fromEnv(array $env = []): self
     {
         $env = $env ?: $_ENV + $_SERVER;
@@ -256,7 +265,9 @@ final class AuthConfig
     public function signingKey(): string { return $this->signingKey; }
     public function accessTtl(): int { return $this->accessTtl; }
     public function refreshTtl(): int { return $this->refreshTtl; }
+    /** @return array<string,mixed> */
     public function roles(): array { return $this->roles; }
+    /** @return array<string,mixed> */
     public function clients(): array { return $this->clients; }
     public function pkceWindow(): int { return $this->pkceWindow; }
     public function publicBaseUrl(): string

@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace BlackCat\Auth\Tests\Session;
 
-use BlackCat\Auth\Session\InMemorySessionStore;
-use BlackCat\Auth\Session\SessionService;
+use BlackCat\Sessions\SessionService;
+use BlackCat\Sessions\Store\InMemorySessionStore;
 use PHPUnit\Framework\TestCase;
 
 final class SessionServiceTest extends TestCase

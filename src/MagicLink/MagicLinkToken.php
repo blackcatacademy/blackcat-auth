@@ -5,6 +5,9 @@ namespace BlackCat\Auth\MagicLink;
 
 final class MagicLinkToken
 {
+    /**
+     * @param array<string,mixed> $context
+     */
     public function __construct(
         public readonly string $fingerprint,
         public readonly string $subject,

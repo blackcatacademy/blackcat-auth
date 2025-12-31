@@ -10,6 +10,58 @@ use PHPUnit\Framework\TestCase;
 
 final class HttpServerTest extends TestCase
 {
+    public function testRegistrationEndpointsAreDisabledByDefault(): void
+    {
+        $config = new AuthConfig(
+            'https://auth.example.com',
+            'aud',
+            base64_encode(random_bytes(32)),
+            900,
+            3600,
+            [],
+            [],
+            300,
+            'https://auth.example.com',
+            null
+        );
+        $provider = new ArrayUserProvider([
+            ['id' => 'demo', 'email' => 'demo@example.com', 'password' => 'secret', 'roles' => ['admin']],
+        ]);
+        $server = HttpServer::bootstrap($config, $provider);
+
+        $register = $server->handle([
+            'method' => 'POST',
+            'path' => '/register',
+            'body' => ['email' => 'demo@example.com', 'password' => 'secret'],
+            'headers' => [],
+        ]);
+        self::assertSame(501, $register['status']);
+
+        $verify = $server->handle([
+            'method' => 'POST',
+            'path' => '/verify-email',
+            'body' => ['token' => 'x.y'],
+            'headers' => [],
+        ]);
+        self::assertSame(501, $verify['status']);
+
+        $resetRequest = $server->handle([
+            'method' => 'POST',
+            'path' => '/password-reset/request',
+            'body' => ['email' => 'demo@example.com'],
+            'headers' => [],
+        ]);
+        self::assertSame(501, $resetRequest['status']);
+
+        $resetConfirm = $server->handle([
+            'method' => 'POST',
+            'path' => '/password-reset/confirm',
+            'body' => ['token' => 'x.y', 'new_password' => 'secret'],
+            'headers' => [],
+        ]);
+        self::assertSame(501, $resetConfirm['status']);
+    }
+
     public function testUserinfoEndpoint(): void
     {
         $config = new AuthConfig(
@@ -164,7 +216,8 @@ final class HttpServerTest extends TestCase
             null,
             [],
             600,
-            'https://auth.example.com/magic-login'
+            'https://auth.example.com/magic-login',
+            devReturnMagicLinkToken: true,
         );
         $provider = new ArrayUserProvider([
             ['id' => 'demo', 'email' => 'demo@example.com', 'password' => 'secret', 'roles' => ['admin']],
@@ -204,8 +257,8 @@ final class HttpServerTest extends TestCase
             [],
             null,
             'https://app.example.com/magic',
-            'auth.example.com',
-            'BlackCat Auth'
+            webauthnRpId: 'auth.example.com',
+            webauthnRpName: 'BlackCat Auth',
         );
         $provider = new ArrayUserProvider([
             ['id' => 'demo', 'email' => 'demo@example.com', 'password' => 'secret', 'roles' => ['admin']],

@@ -10,6 +10,7 @@ final class TokenClientCommand implements CommandInterface
     public function name(): string { return 'token:client'; }
     public function description(): string { return 'Issue a client-credentials token for a configured client.'; }
 
+    /** @param list<string> $args */
     public function run(array $args, AuthRuntime $runtime): int
     {
         $clientId = null;

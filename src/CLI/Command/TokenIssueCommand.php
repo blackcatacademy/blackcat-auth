@@ -10,6 +10,7 @@ final class TokenIssueCommand implements CommandInterface
     public function name(): string { return 'token:issue'; }
     public function description(): string { return 'Issue a token pair via configured identity provider.'; }
 
+    /** @param list<string> $args */
     public function run(array $args, AuthRuntime $runtime): int
     {
         $user = null;

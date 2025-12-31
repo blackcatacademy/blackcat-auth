@@ -5,6 +5,9 @@ namespace BlackCat\Auth\Middleware;
 
 final class AuthResult
 {
+    /**
+     * @param array<string,mixed>|null $claims
+     */
     public function __construct(
         public readonly bool $authorized,
         public readonly ?array $claims,

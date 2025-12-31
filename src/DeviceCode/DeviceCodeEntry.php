@@ -5,6 +5,10 @@ namespace BlackCat\Auth\DeviceCode;
 
 final class DeviceCodeEntry
 {
+    /**
+     * @param list<string> $scopes
+     * @param array<string,mixed>|null $tokenPayload
+     */
     public function __construct(
         public readonly string $deviceCode,
         public readonly string $userCode,
@@ -25,11 +29,22 @@ final class DeviceCodeEntry
         return $this->tokenPayload !== null;
     }
 
+    public function isConsumed(): bool
+    {
+        return false;
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
     public function tokens(): ?array
     {
         return $this->tokenPayload;
     }
 
+    /**
+     * @param array<string,mixed> $tokens
+     */
     public function markApproved(array $tokens): self
     {
         return new self(
